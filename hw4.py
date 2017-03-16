@@ -278,7 +278,7 @@ def UPGMA():
 	#here we initialize the clusters themselves, using the distance matrix
 	for i in range(0, len(distance_matrix)):
 		x = TreeNodes()
-		x.dist = distance_matrix[i]
+		x.dist = 0
 		x.label = i
 		clusterList.append(x)
 
@@ -292,8 +292,7 @@ def UPGMA():
 					minima = z
 					i = x
 					j = y
-	for x in clusterList:
-		print x.label, x.dist
+	print minima, i, j
 	
 
 
