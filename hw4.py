@@ -23,6 +23,12 @@ class GlobalAlignmentResult:
 		self.align_1 = align_1
 		self.align_2 = align_2
 
+class TreeNodes:
+	def __init__(self):
+		self.height = 0
+		self.right = None
+		self.left = None
+
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-F', '-f', '--file', type=file, help="fasta filename", required=True)
@@ -43,6 +49,7 @@ def main():
 	compute_global_distances()
     #we print the distance matrix!
 	print_distance_matrix()
+	UPGMA()
 
 
 def parse_file(file):
@@ -239,6 +246,7 @@ def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
     #we do not need to use the full matrix, as the top half/bottom half of the matrix are simply mirrored across the diagonal
     distance_matrix[seq_1.id][seq_2.id] = round(float(distance)/length, 5)
     distance_matrix[seq_2.id][seq_1.id] = round(float(distance) / length, 5)
+    
 
 
 
@@ -254,6 +262,45 @@ def print_distance_matrix():
         #we print the line, and then clear it for the nextl ine
         print line
         line = ""
+
+def findMin(distMatrix):
+	minima = 1
+	for i in range(0, len(distMatrix)-1):
+		for j in range(0, len(distMatrix)-1):
+			if distMatrix[i][j] != 0:
+				x = distMatrix[i][j]
+				if x < minima:
+					minima = x
+	return minima
+
+def UPGMA():
+	#here we initialize a list of all the clusters we are making
+	clusterList = []
+	i = 0
+	j = 0
+	minima = 1
+	#here we initialize the clusters themselves, making their distances 0
+	for i in range(0, len(distance_matrix)-1):
+		x = TreeNodes()
+		x.dist = 0
+		clusterList.append(x)
+
+	#here we find the smallest distance between to sequences - this is done by (naively) sorting through the distance_matrix and comparing each successive minimum we find
+	#we save the indicies for later, so that we can delete the cluster, and we then set the minimum.
+	for x in range(0, len(distance_matrix)-1):
+		for y in range(0, len(distance_matrix)-1):
+			if distance_matrix[x][y] != 0:
+				z = distance_matrix[x][y]
+				if z < minima:
+					minima = z
+					i = x
+					j = y
+
+
+
+
+
+
 
 if __name__ == "__main__":
 	main()
