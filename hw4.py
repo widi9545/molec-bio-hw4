@@ -27,6 +27,7 @@ class TreeNodes:
 	def __init__(self):
 		self.dist = 0
 		self.label = 0
+		self.parent = 0
 		self.right = None
 		self.left = None
 
