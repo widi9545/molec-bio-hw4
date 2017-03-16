@@ -25,7 +25,8 @@ class GlobalAlignmentResult:
 
 class TreeNodes:
 	def __init__(self):
-		self.height = 0
+		self.dist = 0
+		self.label = 0
 		self.right = None
 		self.left = None
 
@@ -274,22 +275,26 @@ def UPGMA():
 	i = 0
 	j = 0
 	minima = 1
-	#here we initialize the clusters themselves, making their distances 0
-	for i in range(0, len(distance_matrix)-1):
+	#here we initialize the clusters themselves, using the distance matrix
+	for i in range(0, len(distance_matrix)):
 		x = TreeNodes()
-		x.dist = 0
+		x.dist = distance_matrix[i]
+		x.label = i
 		clusterList.append(x)
 
 	#here we find the smallest distance between to sequences - this is done by (naively) sorting through the distance_matrix and comparing each successive minimum we find
 	#we save the indicies for later, so that we can delete the cluster, and we then set the minimum (also we need to ignore the 0s for obvious reasons)
-	for x in range(0, len(distance_matrix)-1):
-		for y in range(0, len(distance_matrix)-1):
+	for x in range(0, len(distance_matrix)):
+		for y in range(0, len(distance_matrix)):
 			if distance_matrix[x][y] != 0:
 				z = distance_matrix[x][y]
 				if z < minima:
 					minima = z
 					i = x
 					j = y
+	for x in clusterList:
+		print x.label, x.dist
+	
 
 
 
