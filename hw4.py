@@ -263,15 +263,10 @@ def print_distance_matrix():
         print line
         line = ""
 
-def findMin(distMatrix):
-	minima = 1
-	for i in range(0, len(distMatrix)-1):
-		for j in range(0, len(distMatrix)-1):
-			if distMatrix[i][j] != 0:
-				x = distMatrix[i][j]
-				if x < minima:
-					minima = x
-	return minima
+
+def updateDistances(distMatrix, x, y):
+	return 1
+
 
 def UPGMA():
 	#here we initialize a list of all the clusters we are making
@@ -286,7 +281,7 @@ def UPGMA():
 		clusterList.append(x)
 
 	#here we find the smallest distance between to sequences - this is done by (naively) sorting through the distance_matrix and comparing each successive minimum we find
-	#we save the indicies for later, so that we can delete the cluster, and we then set the minimum.
+	#we save the indicies for later, so that we can delete the cluster, and we then set the minimum (also we need to ignore the 0s for obvious reasons)
 	for x in range(0, len(distance_matrix)-1):
 		for y in range(0, len(distance_matrix)-1):
 			if distance_matrix[x][y] != 0:
@@ -295,6 +290,7 @@ def UPGMA():
 					minima = z
 					i = x
 					j = y
+
 
 
 
