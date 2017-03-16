@@ -265,7 +265,14 @@ def print_distance_matrix():
         line = ""
 
 
-def updateDistances(distMatrix, x, y):
+def updateDistances(distMatrix,i,j):
+	#idea: index into distance matrix
+	#then, take the row/column that we saved down below
+	#and compare the sequence distances associated with that row and column
+	#and compare them to the distances with all the other sequences
+	#if we wanted to update the distance for c and we have sequences a,b we want (D1(a,c) + d1(b,c))/2
+	#then, we will need to delete those rows/colums from the matrix
+	#deleting them is the easy part, gotta finangle with the updating distance part
 	return 1
 
 
