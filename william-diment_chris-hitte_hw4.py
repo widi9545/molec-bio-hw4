@@ -9,7 +9,7 @@ NEWICK_TREE_FILE = ""
 
 sequence_list = []
 distance_matrix = None
-scoringMatrix = numpy.zeros(shape=(4, 4))
+SCORING_MATRIX = numpy.zeros(shape=(4, 4))
 
 # use scoringdict['character'] to look up value associated with that character for use in scoring matrix
 scoringDict = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
@@ -65,7 +65,6 @@ def main():
     #
     parse_score_matrix()
 
-
     # we parse the file
     parse_file(args.file)
 
@@ -89,23 +88,20 @@ def parse_file(file):
     distance_matrix = numpy.zeros((len(sequence_list), len(sequence_list)))
 
 
-def parse_score_matrix(scoreFile):
-    counter = 0
-    file = scoreFile
-    matrixSeq = []
-    fo = file.read()
-    for x in range(0, len(fo)):
-        if fo[x].isdigit() and fo[x - 1] != '-':
-            y = int(fo[x])
-            matrixSeq.append(y)
-        if fo[x].isdigit() and fo[x - 1] == '-':
-            y = int(fo[x])
-            y = y * -1
-            matrixSeq.append(y)
-    for x in range(0, 4):
-        for y in range(0, 4):
-            scoringMatrix[x, y] = matrixSeq[counter]
-            counter = counter + 1
+def parse_score_matrix():
+    lines = SCORING_FILE.readlines()
+
+    i = 0
+    j = 0
+    for line in lines:
+        scores = line.split()
+
+        for score in scores[1:]:
+            SCORING_MATRIX[i][j] = int(score)
+            j += 1
+
+        i += 1
+        j = 0
 
 
 def read_sequences(file):
@@ -192,7 +188,7 @@ def compute_global_distance_matrix(seq_1, seq_2):
             if seq_data_1[j] != seq_data_2[i]:
                 x = scoringDict[seq_data_1[j]]
                 y = scoringDict[seq_data_2[i]]
-                diagonal += scoringMatrix[x, y]
+                diagonal += SCORING_MATRIX[x, y]
 
             # if its a match we will have a score of the diagonal plus 0 - again so we minimize it
             # if its a mismatch, it will be score of the diagonal plus 1 - increasing the distance
@@ -200,14 +196,14 @@ def compute_global_distance_matrix(seq_1, seq_2):
             # same concept for the top, only we specifically use indel here
             x = scoringDict[seq_data_1[j]]
             y = scoringDict[seq_data_2[i]]
-            mismatch = scoringMatrix[x, y]
+            mismatch = SCORING_MATRIX[x, y]
             top = matrix[i - 1][j] + mismatch
 
             # calc left
             # same concept for the left, again only using indel here
             x = scoringDict[seq_data_1[j]]
             y = scoringDict[seq_data_2[i]]
-            mismatch = scoringMatrix[x, y]
+            mismatch = SCORING_MATRIX[x, y]
             left = matrix[i][j - 1] + mismatch
             # we calculate the minmimum to minmize the distance and then put that value in for the matrix
             matrix[i][j] = max(top, left, diagonal)
