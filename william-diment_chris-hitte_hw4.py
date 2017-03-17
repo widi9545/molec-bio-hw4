@@ -1,6 +1,12 @@
 import argparse
 import numpy
 
+
+FASTA_FILE = ""
+SCORING_FILE = ""
+GAP_PENALTY = -1
+NEWICK_TREE_FILE = ""
+
 sequence_list = []
 distance_matrix = None
 scoringMatrix = numpy.zeros(shape=(4, 4))
@@ -37,24 +43,40 @@ class TreeNodes:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-F', '-f', '--file', type=file, help="fasta filename", required=True)
-    parser.add_argument('-T', '-t', '--width', type=str, help="output file", default="output.fasta")
-    parser.add_argument('-S', '-s', '--score', type=file, help="scoring matrix", default=None)
-    parser.add_argument('-G', '-g', '--g', type=int, help="gap penalty", default=None)
+    parser.add_argument('-F', '-f', '--fasta', type=file, help="fasta filename", required=True)
+    parser.add_argument('-T', '-t', '--tree', type=str, help="destination for the generated Newick tree", required=True)
+    parser.add_argument('-S', '-s', '--score', type=file, help="scoring matrix filename", required=True)
+    parser.add_argument('-G', '-g', '--gap', type=int, help="gap penalty", required=True)
+
     args = parser.parse_args()
 
-    global WIDTH_CONST
-    WIDTH_CONST = args.width
+    global FASTA_FILE
+    FASTA_FILE = args.fasta
+
+    global SCORING_FILE
+    SCORING_FILE = args.score
+
+    global GAP_PENALTY
+    GAP_PENALTY = args.gap
+
+    global NEWICK_TREE_FILE
+    NEWICK_TREE_FILE = args.tree
+
+    #
+    parse_score_matrix()
+
+
     # we parse the file
     parse_file(args.file)
-    global g
-    g = args.g
-    scoringMatrix = parseScoreMatrix(args.score)
+
+
 
     # we calculate the alignments and build the distance matrix
     compute_global_distances()
+
     # we print the distance matrix!
     print_distance_matrix()
+
     UPGMA()
 
 
@@ -67,7 +89,7 @@ def parse_file(file):
     distance_matrix = numpy.zeros((len(sequence_list), len(sequence_list)))
 
 
-def parseScoreMatrix(scoreFile):
+def parse_score_matrix(scoreFile):
     counter = 0
     file = scoreFile
     matrixSeq = []
@@ -84,7 +106,6 @@ def parseScoreMatrix(scoreFile):
         for y in range(0, 4):
             scoringMatrix[x, y] = matrixSeq[counter]
             counter = counter + 1
-    return scoringMatrix
 
 
 def read_sequences(file):
