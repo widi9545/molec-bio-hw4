@@ -1,5 +1,6 @@
 import argparse
 import numpy
+import time
 sequence_list = []
 distance_matrix = None
 scoringMatrix = numpy.zeros(shape=(4,4))
@@ -43,16 +44,15 @@ def main():
 	WIDTH_CONST = args.width
     #we parse the file
 	parse_file(args.file)
-	global g
-	g = args.g
+	global gapScore
+	gapScore = args.g
 	scoringMatrix = parseScoreMatrix(args.score)
 
     #we calculate the alignments and build the distance matrix
 	compute_global_distances()
     #we print the distance matrix!
 	print_distance_matrix()
-	UPGMA()
-
+	
 
 def parse_file(file):
     read_sequences(file)
@@ -136,16 +136,21 @@ def compute_global_distance_matrix(seq_1, seq_2):
 	#we initialize a matrix to the size of the sequences
 	matrix = numpy.zeros((len(seq_data_2), len(seq_data_1)))
 
-	#for the top row and column, we initialize their values according to the standard scoring system for glbobal alignment
-	i = 0
+	#for the top row and column, we initialize their values according to the scoring matrix that has been provided
+	i = 1
 	while i < len(seq_data_1):
-		matrix[0][i] = i
+		index = scoringDict[seq_data_1[i]]
+		score = scoringMatrix[index,index]
+		matrix[0][i] = score * i
 		i += 1
 
-	i = 0
+	i = 1
 	while i < len(seq_data_2):
-		matrix[i][0] = i
+		index = scoringDict[seq_data_2[i]]
+		score = scoringMatrix[index,index]
+		matrix[i][0] = score * i
 		i += 1
+			
    
 	#we begin to iterate through the matrix to calculate our alignment. as is standard, we try to look for diagonal matches if possible
 	i = 1
@@ -154,30 +159,19 @@ def compute_global_distance_matrix(seq_1, seq_2):
 		while j < len(seq_data_1):
 
 			# calc diagonal
-			#if characters are aligned, we say its a match and give it a score of 0 so we can minimize it
-			#if characters arent aligned we say its a mismatch so that we increase the distance
-			diagonal = matrix[i - 1][j - 1]
-			if seq_data_1[j] != seq_data_2[i]:
-				x = scoringDict[seq_data_1[j]]
-				y = scoringDict[seq_data_2[i]]
-				diagonal += scoringMatrix[x,y]
+			#this is a little different from how we did it previously, but its the same thing - if it's a match it will pull in the match because the indicies will be equal
+			#if its not a match the indicies are differnet, so it pulls in the mismatch - conceptually this was a little easier for me
+			diagonal = matrix[i - 1][j - 1] + scoringMatrix[scoringDict[seq_data_1[i]]][scoringDict[seq_data_2[j]]]
 
-			#if its a match we will have a score of the diagonal plus 0 - again so we minimize it
-			#if its a mismatch, it will be score of the diagonal plus 1 - increasing the distance
+			
 			# calc top
-			#same concept for the top, only we specifically use indel here
-			x = scoringDict[seq_data_1[j]]
-			y = scoringDict[seq_data_2[i]]
-			mismatch = scoringMatrix[x,y]
-			top = matrix[i - 1][j] + mismatch
+			#here is a gap, so we use the gapscore as provided by the command line
+			top = matrix[i - 1][j] + gapScore
       
 			# calc left
-			#same concept for the left, again only using indel here
-			x = scoringDict[seq_data_1[j]]
-			y = scoringDict[seq_data_2[i]]
-			mismatch = scoringMatrix[x,y]
-			left = matrix[i][j - 1] + mismatch
-			#we calculate the minmimum to minmize the distance and then put that value in for the matrix
+			#here is a gap here, so we use the gapscore as provided by the command line
+			left = matrix[i][j - 1] + gapScore
+			#we calculate the maximum to maximize the distance and then put that value in for the matrix
 			matrix[i][j] = max(top, left, diagonal)
 
 			j += 1
@@ -203,13 +197,13 @@ def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
         l = matrix[i][j - 1]
         d = matrix[i - 1][j - 1]
         #if the diagonal is at least less than or equal to both the left and top values, we choose the diagonal for our value as it represents a match between the two sequences
-        if d >= l and d >= u:
+        if d <= l and d <= u:
             align_1 = seq_data_1[j] + align_1
             align_2 = seq_data_2[i] + align_2
             i -= 1
             j -= 1
         #if the left side is greater than the diagonal but less then the top, we choose the left side for our value, and it represents a gap in the second sequence
-        elif l >= u:
+        elif l <= u:
             align_1 = seq_data_1[j] + align_1
             align_2 = '-' + align_2
             j -= 1
@@ -236,11 +230,11 @@ def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
     distance = 0
     length = len(align_1)
 
-    #if the two sequences do not align, there is either a mismatch or an indel, so we increase the 'distance' by the gap provided on the command prompt
+    #if the two sequences do not align, there is either a mismatch or an indel, so we increase the 'distance' 
     i = 0
     while i < length:
         if align_1[i] != align_2[i]:
-            distance += g
+            distance += 1
 
         i += 1
     #we build the distance matrix here. the formula is the mismatches/length, portrayed here as distance/length
