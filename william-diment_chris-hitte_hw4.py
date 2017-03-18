@@ -7,9 +7,9 @@ SCORING_FILE = ""
 GAP_PENALTY = -1
 NEWICK_TREE_FILE = ""
 
-sequence_list = []
-distance_matrix = None
-SCORING_MATRIX = numpy.zeros(shape=(4, 4))
+SCORING_MATRIX = numpy.zeros((4, 4))
+SEQUENCE_LIST = []
+DISTANCE_MATRIX = None
 
 # use scoringdict['character'] to look up value associated with that character for use in scoring matrix
 scoringDict = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
@@ -66,9 +66,10 @@ def main():
     parse_score_matrix()
 
     # we parse the file
-    parse_file(args.file)
+    parse_file()
 
-
+    global DISTANCE_MATRIX
+    DISTANCE_MATRIX = numpy.zeros((len(SEQUENCE_LIST), len(SEQUENCE_LIST)))
 
     # we calculate the alignments and build the distance matrix
     compute_global_distances()
@@ -76,16 +77,8 @@ def main():
     # we print the distance matrix!
     print_distance_matrix()
 
-    UPGMA()
-
-
-def parse_file(file):
-    read_sequences(file)
-    # we read the sequences from the file and initialize a global distance matrix that we will use
-    # the matrix is initialized to the size of the sequence lists, as we will need a N x M matrix to account for
-    # each of the sequences
-    global distance_matrix
-    distance_matrix = numpy.zeros((len(sequence_list), len(sequence_list)))
+    #
+    #UPGMA()
 
 
 def parse_score_matrix():
@@ -104,23 +97,26 @@ def parse_score_matrix():
         j = 0
 
 
-def read_sequences(file):
+def parse_file():
+    # we read the sequences from the file and initialize a global distance matrix that we will use
+    # the matrix is initialized to the size of the sequence lists, as we will need a N x M matrix to account for
+    # each of the sequences
     id = 0
 
     # we read the lines from the file
-    line = file.readline()
+    line = FASTA_FILE.readline()
     while line != '' and line[0] == '>':
         # we get the title of the sequence here and append it to a global sequence list
         new_sequence = Sequence(id, line[1:-1])
-        sequence_list.append(new_sequence)
+        SEQUENCE_LIST.append(new_sequence)
 
         # we look for every character between > and the end of the line so that we get every base in there
         # this is then passed to the class that we have declared above for ease of access
         seq_data = ""
-        line = file.readline()
+        line = FASTA_FILE.readline()
         while line != '' and line[0] != '>':
             seq_data += line[:-1]
-            line = file.readline()
+            line = FASTA_FILE.readline()
 
         new_sequence.seq_data = seq_data
         # we ID each sequence to associate it with a given number
@@ -131,22 +127,19 @@ def compute_global_distances():
     i = 0
     j = 0
 
-    while i < len(sequence_list):
-        seq_1 = sequence_list[i]
+    while i < len(SEQUENCE_LIST):
+        seq_1 = SEQUENCE_LIST[i]
 
-        while j < len(sequence_list):
+        while j < len(SEQUENCE_LIST):
             if j != i:
-                seq_2 = sequence_list[j]
+                seq_2 = SEQUENCE_LIST[j]
+
                 # we return the matrix calculated below, having associated the sequence from the sequence list with the
                 # ID in the class list to get the sequence
                 matrix = compute_global_distance_matrix(seq_1, seq_2)
 
-                show_alignment = False
-                # as an alignment pair is calculated it gets printed right away, the permission bit is flipped here
-                if i % 2 == 0 and j - i == 1:
-                    show_alignment = True
-                    # we then calculate the alignment from the matrix above
-                calculate_global_distance(seq_1, seq_2, matrix, show_alignment)
+                # we then calculate the alignment from the matrix above
+                calculate_global_distance(seq_1, seq_2, matrix)
 
             j += 1
 
@@ -159,6 +152,7 @@ def compute_global_distance_matrix(seq_1, seq_2):
     # that we have in the sequence class
     seq_data_1 = ' ' + seq_1.seq_data
     seq_data_2 = ' ' + seq_2.seq_data
+
     # we initialize a matrix to the size of the sequences
     matrix = numpy.zeros((len(seq_data_2), len(seq_data_1)))
 
@@ -216,7 +210,7 @@ def compute_global_distance_matrix(seq_1, seq_2):
     return matrix
 
 
-def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
+def calculate_global_distance(seq_1, seq_2, matrix):
     # again, we associate the sequences with the sequences in the Sequence class
     seq_data_1 = seq_1.seq_data
     seq_data_2 = seq_2.seq_data
@@ -276,15 +270,15 @@ def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
     i = 0
     while i < length:
         if align_1[i] != align_2[i]:
-            distance += g
+            distance += GAP_PENALTY
 
         i += 1
     # we build the distance matrix here. the formula is the mismatches/length, portrayed here as distance/length
     # e compare each sequence to every other sequence, using only the top half of the matrix
     # we do not need to use the full matrix, as the top half/bottom half of the matrix are simply mirrored across the
 	# diagonal
-    distance_matrix[seq_1.id][seq_2.id] = round(float(distance) / length, 5)
-    distance_matrix[seq_2.id][seq_1.id] = round(float(distance) / length, 5)
+    DISTANCE_MATRIX[seq_1.id][seq_2.id] = round(float(distance) / length, 5)
+    DISTANCE_MATRIX[seq_2.id][seq_1.id] = round(float(distance) / length, 5)
 
 
 def print_distance_matrix():
@@ -294,7 +288,7 @@ def print_distance_matrix():
     line = ""
     # we build up each line in the distance matrix here, and format it according to the specifications that it be within
 	# a 0-1 decimal range
-    for row in distance_matrix:
+    for row in DISTANCE_MATRIX:
         for column in row:
             line += "{0:.5f} ".format(round(column, 5))
         # we print the line, and then clear it for the nextl ine
@@ -314,30 +308,7 @@ def updateDistances(distMatrix, i, j):
 
 
 def UPGMA():
-    # here we initialize a list of all the clusters we are making
-    clusterList = []
-    i = 0
-    j = 0
-    minima = 1
-    # here we initialize the clusters themselves, using the distance matrix
-    for i in range(0, len(distance_matrix)):
-        x = TreeNodes()
-        x.dist = 0
-        x.label = i
-        clusterList.append(x)
-
-    # here we find the smallest distance between to sequences - this is done by (naively) sorting through the
-	# distance_matrix and comparing each successive minimum we find we save the indicies for later, so that we can
-	# delete the cluster, and we then set the minimum (also we need to ignore the 0s for obvious reasons)
-    for x in range(0, len(distance_matrix)):
-        for y in range(0, len(distance_matrix)):
-            if distance_matrix[x][y] != 0:
-                z = distance_matrix[x][y]
-                if z < minima:
-                    minima = z
-                    i = x
-                    j = y
-    print minima, i, j
+    print
 
 
 if __name__ == "__main__":
