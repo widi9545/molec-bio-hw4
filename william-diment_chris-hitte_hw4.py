@@ -368,12 +368,12 @@ def print_newick_tree():
 
 def calculate_newick_tree(node):
     if isinstance(node, TreeNode):
-        return "{0}:{1}".format(node.label, node.score)
+        return "{0}:{1}".format(node.label, "{0:.5f}".format(round(node.score, 5)))
 
     elif node != TREE_ROOT:
         return "({0}, {1}):{2}".format(calculate_newick_tree(node.left),
                                        calculate_newick_tree(node.right),
-                                       node.score)
+                                       "{0:.5f}".format(round(node.score, 5)))
     else:
         return "({0}, {1});".format(calculate_newick_tree(node.left), calculate_newick_tree(node.right))
 
