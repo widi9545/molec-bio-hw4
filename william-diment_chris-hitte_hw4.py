@@ -109,9 +109,6 @@ def parse_score_matrix():
 def parse_fasta_file():
     read_sequences()
 
-    # we read the sequences from the file and initialize a global distance matrix that we will use
-    # the matrix is initialized to the size of the sequence lists, as we will need a N x M matrix to account for
-    # each of the sequences
     global DISTANCE_MATRIX
     DISTANCE_MATRIX = numpy.zeros((len(SEQUENCE_LIST), len(SEQUENCE_LIST)))
 
@@ -119,15 +116,11 @@ def parse_fasta_file():
 def read_sequences():
     id = 0
 
-    # we read the lines from the file
     line = FASTA_FILE.readline()
     while line != '' and line[0] == '>':
-        # we get the title of the sequence here and append it to a global sequence list
         new_sequence = Sequence(id, line[1:-1])
         SEQUENCE_LIST.append(new_sequence)
 
-        # we look for every character between > and the end of the line so that we get every base in there
-        # this is then passed to the class that we have declared above for ease of access
         seq_data = ""
         line = FASTA_FILE.readline()
         while line != '' and line[0] != '>':
@@ -135,29 +128,23 @@ def read_sequences():
             line = FASTA_FILE.readline()
 
         new_sequence.seq_data = seq_data
-        # we ID each sequence to associate it with a given number
+
         id += 1
 
 
 def compute_global_distances():
     i = 0
     j = 0
-
     while i < len(SEQUENCE_LIST):
         seq_1 = SEQUENCE_LIST[i]
 
         while j < len(SEQUENCE_LIST):
             if j != i:
                 seq_2 = SEQUENCE_LIST[j]
-                # we return the matrix calculated below, having associated the sequence from the sequence list with the ID in the class list to get the sequence
+
                 matrix = compute_global_distance_matrix(seq_1, seq_2)
 
-                show_alignment = False
-                # as an alignment pair is calculated it gets printed right away, the permission bit is flipped here
-                if i % 2 == 0 and j - i == 1:
-                    show_alignment = True
-                    # we then calculate the alignment from the matrix above
-                calculate_global_distance(seq_1, seq_2, matrix, show_alignment)
+                calculate_global_distance(seq_1, seq_2, matrix)
 
             j += 1
 
@@ -166,14 +153,11 @@ def compute_global_distances():
 
 
 def compute_global_distance_matrix(seq_1, seq_2):
-    # here we begin building our scoring matrix to calculate the alignment, initialize the data from the sequences
-    # that we have in the sequence class
     seq_data_1 = ' ' + seq_1.seq_data
     seq_data_2 = ' ' + seq_2.seq_data
-    # we initialize a matrix to the size of the sequences
+
     matrix = numpy.zeros((len(seq_data_2), len(seq_data_1)))
 
-    # for the top row and column, we initialize their values according to the scoring matrix that has been provided
     i = 1
     while i < len(seq_data_1):
         index = SCORING_INDEX[seq_data_1[i]]
@@ -188,25 +172,17 @@ def compute_global_distance_matrix(seq_1, seq_2):
         matrix[i][0] = score * i
         i += 1
 
-    # we begin to iterate through the matrix to calculate our alignment. as is standard, we try to look for diagonal matches if possible
     i = 1
     j = 1
     while i < len(seq_data_2):
         while j < len(seq_data_1):
-            # calc diagonal
-            # this is a little different from how we did it previously, but its the same thing - if it's a match it will pull in the match because the indicies will be equal
-            # if its not a match the indicies are differnet, so it pulls in the mismatch - conceptually this was a little easier for me
-            diagonal = matrix[i - 1][j - 1] + SCORING_MATRIX[SCORING_INDEX[seq_data_1[i]]][SCORING_INDEX[seq_data_2[j]]]
+            diagonal = matrix[i - 1][j - 1] + SCORING_MATRIX[SCORING_INDEX[seq_data_1[j]]][SCORING_INDEX[seq_data_2[i]]]
 
-            # calc top
-            # here is a gap, so we use the GAP_PENALTY as provided by the command line
             top = matrix[i - 1][j] + GAP_PENALTY
 
-            # calc left
-            # here is a gap here, so we use the GAP_PENALTY as provided by the command line
             left = matrix[i][j - 1] + GAP_PENALTY
-            # we calculate the maximum to maximize the distance and then put that value in for the matrix
-            matrix[i][j] = max(top, left, diagonal)
+
+            matrix[i][j] = max(top, left, diagonal, 0)
 
             j += 1
 
@@ -217,46 +193,43 @@ def compute_global_distance_matrix(seq_1, seq_2):
 
 
 def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
-    # again, we associate the sequences with the sequences in the Sequence class
     seq_data_1 = seq_1.seq_data
     seq_data_2 = seq_2.seq_data
-    # we initialize our alignment strings
+
     align_1 = ""
     align_2 = ""
-    # we get the length of the sequences here to properly iterate through the matrix. we will use a backtrace through the matrix
+
     i = len(seq_data_2) - 1
     j = len(seq_data_1) - 1
     while i > 0 and j > 0:
-        # we take the values from three directions, above, left, diagonal. We are looking for the minimum here, and will choose from these values below
         u = matrix[i - 1][j]
         l = matrix[i][j - 1]
         d = matrix[i - 1][j - 1]
-        # if the diagonal is at least less than or equal to both the left and top values, we choose the diagonal for our value as it represents a match between the two sequences
+
         if d <= l and d <= u:
             align_1 = seq_data_1[j] + align_1
             align_2 = seq_data_2[i] + align_2
             i -= 1
             j -= 1
-        # if the left side is greater than the diagonal but less then the top, we choose the left side for our value, and it represents a gap in the second sequence
+
         elif l <= u:
             align_1 = seq_data_1[j] + align_1
             align_2 = '-' + align_2
             j -= 1
-        # if the top is smaller then the left and the right, we choose the top and it also represents a gap in the first sequence
+
         else:
             align_1 = '-' + align_1
             align_2 = seq_data_2[i] + align_2
             i -= 1
-    # if we reach the end of the first sequence we append the end of the sequence to the alignment here
+
     while j >= 0:
         align_1 = seq_data_1[j] + align_1
         j -= 1
-    # if we reach the end of the second sequence we append the end of the sequence to the alignment here
+
     while i >= 0:
         align_2 = seq_data_2[i] + align_2
         i -= 1
 
-    # we compare the lengths of the alignments here - if one is longer than the other, we correct it so that it will align properly
     if len(align_1) > len(align_2):
         align_2 = ((len(align_1) - len(align_2)) * '-') + align_2
     elif len(align_2) > len(align_1):
@@ -265,16 +238,13 @@ def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
     distance = 0
     length = len(align_1)
 
-    # if the two sequences do not align, there is either a mismatch or an indel, so we increase the 'distance' 
     i = 0
     while i < length:
         if align_1[i] != align_2[i]:
             distance += 1
 
         i += 1
-    # we build the distance matrix here. the formula is the mismatches/length, portrayed here as distance/length
-    # e compare each sequence to every other sequence, using only the top half of the matrix
-    # we do not need to use the full matrix, as the top half/bottom half of the matrix are simply mirrored across the diagonal
+
     DISTANCE_MATRIX[seq_1.id][seq_2.id] = round(float(distance) / length, 5)
     DISTANCE_MATRIX[seq_2.id][seq_1.id] = round(float(distance) / length, 5)
 
@@ -284,11 +254,10 @@ def print_distance_matrix():
     print
 
     line = ""
-    # we build up each line in the distance matrix here, and format it according to the specifications that it be within a 0-1 decimal range
     for row in DISTANCE_MATRIX:
         for column in row:
             line += "{0:.5f} ".format(round(column, 5))
-        # we print the line, and then clear it for the nextl ine
+
         print line
         line = ""
 
