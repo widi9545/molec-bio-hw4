@@ -73,19 +73,21 @@ def main():
     parse_score_matrix()
 
     # we parse the file
-    parse_fasta_file(args.file)
+    parse_fasta_file()
 
     # we calculate the alignments and build the distance matrix
     compute_global_distances()
 
     # we print the distance matrix!
-    print_DISTANCE_MATRIX()
+    print_distance_matrix()
 
     #
     compute_upgma()
 
     #
-    print_newick_tree(TREE_ROOT)
+    print
+
+    print_newick_tree()
 
 
 def parse_score_matrix():
@@ -148,7 +150,7 @@ def compute_global_distances():
             if j != i:
                 seq_2 = SEQUENCE_LIST[j]
                 # we return the matrix calculated below, having associated the sequence from the sequence list with the ID in the class list to get the sequence
-                matrix = compute_global_DISTANCE_MATRIX(seq_1, seq_2)
+                matrix = compute_global_distance_matrix(seq_1, seq_2)
 
                 show_alignment = False
                 # as an alignment pair is calculated it gets printed right away, the permission bit is flipped here
@@ -163,7 +165,7 @@ def compute_global_distances():
         j = i
 
 
-def compute_global_DISTANCE_MATRIX(seq_1, seq_2):
+def compute_global_distance_matrix(seq_1, seq_2):
     # here we begin building our scoring matrix to calculate the alignment, initialize the data from the sequences
     # that we have in the sequence class
     seq_data_1 = ' ' + seq_1.seq_data
@@ -277,7 +279,7 @@ def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
     DISTANCE_MATRIX[seq_2.id][seq_1.id] = round(float(distance) / length, 5)
 
 
-def print_DISTANCE_MATRIX():
+def print_distance_matrix():
     print "Distance Matrix for all Sequences:"
     print
 
@@ -319,8 +321,8 @@ def compute_upgma():
             node_2.score = score / 2 - node_2.score
 
         node = TreeCluster(score / 2)
-        node.left(node_1)
-        node.right(node_2)
+        node.left = node_1
+        node.right = node_2
 
         TREE_NODE_INDEX[str(cluster_list[next_c_i] + cluster_list[next_c_j])] = node
 
@@ -331,8 +333,6 @@ def compute_upgma():
 
     global TREE_ROOT
     TREE_ROOT = node
-
-    print print_newick_tree(node)
 
 
 def find_next_cluster(cluster_list):
@@ -377,16 +377,28 @@ def compute_cluster_distance(c_i, c_j):
     return score
 
 
-def print_newick_tree(node):
+def print_newick_tree():
+    print "Newick Tree:"
+    print
+
+    tree = calculate_newick_tree(TREE_ROOT)
+
+    print tree
+
+    out = file(NEWICK_TREE_FILE, 'w')
+    out.write(tree)
+
+
+def calculate_newick_tree(node):
     if isinstance(node, TreeNode):
         return "{0}:{1}".format(node.label, node.score)
 
     elif node != TREE_ROOT:
-        return "({0}, {1}):{2}".format(print_newick_tree(node.left),
-                                       print_newick_tree(node.right),
+        return "({0}, {1}):{2}".format(calculate_newick_tree(node.left),
+                                       calculate_newick_tree(node.right),
                                        node.score)
     else:
-        return "({0}, {1})".format(print_newick_tree(node.left), print_newick_tree(node.right))
+        return "({0}, {1});".format(calculate_newick_tree(node.left), calculate_newick_tree(node.right))
 
 
 if __name__ == "__main__":
