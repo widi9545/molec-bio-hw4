@@ -21,7 +21,7 @@ TREE_ROOT = None
 class Sequence:
     def __init__(self, id, name):
         self.id = id
-        self.name = name
+        self.name = name.replace(' ', '_').replace('\t', '_')
         self.seq_data = ""
 
 
@@ -85,12 +85,13 @@ def main():
     compute_upgma()
 
     #
-    print
-
     print_newick_tree()
 
+    print "exiting..."
 
 def parse_score_matrix():
+    print "parsing scoring matrix..."
+
     lines = SCORING_FILE.readlines()
 
     i = 0
@@ -105,12 +106,20 @@ def parse_score_matrix():
         i += 1
         j = 0
 
+    print "done"
+    print
+
 
 def parse_fasta_file():
+    print "parsing fasta file..."
+
     read_sequences()
 
     global DISTANCE_MATRIX
     DISTANCE_MATRIX = numpy.zeros((len(SEQUENCE_LIST), len(SEQUENCE_LIST)))
+
+    print "done"
+    print
 
 
 def read_sequences():
@@ -133,6 +142,8 @@ def read_sequences():
 
 
 def compute_global_distances():
+    print "calculating global distance matrix..."
+
     i = 0
     j = 0
     while i < len(SEQUENCE_LIST):
@@ -151,26 +162,15 @@ def compute_global_distances():
         i += 1
         j = i
 
+    print "done"
+    print
+
 
 def compute_global_distance_matrix(seq_1, seq_2):
     seq_data_1 = ' ' + seq_1.seq_data
     seq_data_2 = ' ' + seq_2.seq_data
 
     matrix = numpy.zeros((len(seq_data_2), len(seq_data_1)))
-
-    i = 1
-    while i < len(seq_data_1):
-        index = SCORING_INDEX[seq_data_1[i]]
-        score = SCORING_MATRIX[index, index]
-        matrix[0][i] = score * i
-        i += 1
-
-    i = 1
-    while i < len(seq_data_2):
-        index = SCORING_INDEX[seq_data_2[i]]
-        score = SCORING_MATRIX[index, index]
-        matrix[i][0] = score * i
-        i += 1
 
     i = 1
     j = 1
@@ -192,34 +192,34 @@ def compute_global_distance_matrix(seq_1, seq_2):
     return matrix
 
 
-def calculate_global_distance(seq_1, seq_2, matrix, show_alignment=False):
+def calculate_global_distance(seq_1, seq_2, matrix):
     seq_data_1 = seq_1.seq_data
     seq_data_2 = seq_2.seq_data
 
     align_1 = ""
     align_2 = ""
 
-    i = len(seq_data_2) - 1
-    j = len(seq_data_1) - 1
+    i = len(seq_data_2)
+    j = len(seq_data_1)
     while i > 0 and j > 0:
         u = matrix[i - 1][j]
         l = matrix[i][j - 1]
         d = matrix[i - 1][j - 1]
 
-        if d <= l and d <= u:
-            align_1 = seq_data_1[j] + align_1
-            align_2 = seq_data_2[i] + align_2
+        if d >= l and d >= u:
+            align_1 = seq_data_1[j-1] + align_1
+            align_2 = seq_data_2[i-1] + align_2
             i -= 1
             j -= 1
 
-        elif l <= u:
-            align_1 = seq_data_1[j] + align_1
+        elif l >= u:
+            align_1 = seq_data_1[j-1] + align_1
             align_2 = '-' + align_2
             j -= 1
 
         else:
             align_1 = '-' + align_1
-            align_2 = seq_data_2[i] + align_2
+            align_2 = seq_data_2[i-1] + align_2
             i -= 1
 
     while j >= 0:
@@ -261,8 +261,12 @@ def print_distance_matrix():
         print line
         line = ""
 
+    print
+
 
 def compute_upgma():
+    print "computing UPGMA for global distance matrix..."
+
     node = None
 
     cluster_list = []
@@ -302,6 +306,9 @@ def compute_upgma():
 
     global TREE_ROOT
     TREE_ROOT = node
+
+    print "done"
+    print
 
 
 def find_next_cluster(cluster_list):
@@ -352,10 +359,11 @@ def print_newick_tree():
 
     tree = calculate_newick_tree(TREE_ROOT)
 
-    print tree
-
     out = file(NEWICK_TREE_FILE, 'w')
     out.write(tree)
+
+    print tree
+    print
 
 
 def calculate_newick_tree(node):
